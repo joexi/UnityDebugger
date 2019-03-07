@@ -144,16 +144,19 @@ public class UnityDebugger : EditorWindow
             List<object> objList = new List<object>();
             for (int i = 0; i < Actions.Count; i++)
             {
+                Debug.LogError(objList.Count + " " + i);
                 UnityDebuggerAction act = Actions[i];
                 Debug.LogError(act.Content);
                 if (act.Type == UnityDebuggerActionType.Class)
                 {
-                    Assembly asm = Assembly.GetAssembly(typeof(MonoBehaviour));
-                    Type t = asm.GetType(act.Content);
-                    if (t == null)
-                    {
-                        asm = Assembly.GetAssembly(typeof(UnityDebugger));
-                        t = asm.GetType(act.Content);
+                    Assembly[] assemblys = AppDomain.CurrentDomain.GetAssemblies();
+                    Type t = null;
+                    for (int j = 0; j < assemblys.Length; j++) {
+                        t = assemblys[j].GetType(act.Content);
+                        if (t != null)
+                        {
+                            break;
+                        }
                     }
                     objList.Add(t);
                     act.Result = t;
@@ -161,19 +164,58 @@ public class UnityDebugger : EditorWindow
                 else if (act.Type == UnityDebuggerActionType.Field)
                 {
                     object lastObj = objList[i - 1];
+                    
                     if (lastObj is Type)
                     {
-                        FieldInfo obj = (lastObj as Type).GetField(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-                        object result = obj.GetValue(lastObj);
-                        objList.Add(result);
-                        act.Result = result;
+                        Type type = (lastObj as Type);
+                        while (type != null)
+                        {
+                            FieldInfo obj = type.GetField(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                            PropertyInfo obj2 = type.GetProperty(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+
+                            if (obj != null)
+                            {
+                                object result = obj.GetValue(lastObj);
+                                objList.Add(result);
+                                act.Result = result;
+                                break;
+                            }
+                            else if (obj2 != null)
+                            {
+                                object result = obj2.GetValue(lastObj, null);
+                                objList.Add(result);
+                                act.Result = result;
+                                break;
+                            }
+                            else {
+                                type = type.BaseType;
+                                Debug.LogError("type " + type);
+                                if (type == null) {
+                                    Debug.LogError("Not Found");
+                                    objList.Add(null);
+                                    break;
+                                }
+                            }
+                        }
+                       
                     }
                     else
                     {
+                        Debug.LogError(lastObj + " " + act.Content);
                         FieldInfo obj = lastObj.GetType().GetField(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-                        object result = obj.GetValue(lastObj);
-                        objList.Add(result);
-                        act.Result = result;
+                        if (obj != null)
+                        {
+                            object result = obj.GetValue(lastObj);
+                            objList.Add(result);
+                            act.Result = result;
+                        }
+                        else
+                        {
+                            PropertyInfo prop = lastObj.GetType().GetProperty(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                            object result = prop.GetValue(lastObj, null);
+                            objList.Add(result);
+                            act.Result = result;
+                        }
                     }
                 }
                 else if (act.Type == UnityDebuggerActionType.Method)
@@ -186,8 +228,8 @@ public class UnityDebugger : EditorWindow
                         object result = obj.Invoke(null, act.Params);
                         objList.Add(result);
                         act.Result = result;
-                    }
-                    else 
+                    }  
+                    else  
                     {
                         MethodInfo obj = lastObj.GetType().GetMethod(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
                         object result = obj.Invoke(lastObj, act.Params);
@@ -202,15 +244,8 @@ public class UnityDebugger : EditorWindow
     }
 
     public void LogObj(List<object> objs) {
-        for (int i = objs.Count - 1; i >= 0; i--) {
-
-            if (objs[i] is FieldInfo)
-            {
-               
-            }
-            else {
-                
-            }
-        }
+        //for (int i = objs.Count - 1; i >= 0; i--) {
+        //    Debug.LogError(objs[i]);
+        //}
     }
 }
