@@ -33,7 +33,9 @@ public class UnityDebugger : EditorWindow
         public UnityDebuggerActionType Type;
         public string Content;
         public object Result;
+        public object[] Params;
     }
+
     public List<UnityDebuggerAction> Actions = new List<UnityDebuggerAction>();
     public List<Type> Types = new List<Type>();
 
@@ -119,8 +121,15 @@ public class UnityDebugger : EditorWindow
         {
             GUILayout.BeginHorizontal();
             UnityDebuggerAction act = Actions[i];
-            GUILayout.Label(act.Type.ToString());
-            act.Content = GUILayout.TextField(act.Content);
+            GUILayout.Label(act.Type.ToString(), GUILayout.Width(150));
+            act.Content = GUILayout.TextField(act.Content, GUILayout.Width(150));
+            if (act.Type == UnityDebuggerActionType.Method)
+            {
+                GUILayout.Label("", GUILayout.Width(150));
+            }
+            else {
+                GUILayout.Label("", GUILayout.Width(150));
+            }
             if (act.Result != null) {
                 GUILayout.Label("Result:" + act.Result.ToString() + " Type:" + act.Result.GetType());
             }
@@ -171,18 +180,17 @@ public class UnityDebugger : EditorWindow
                 {
                     
                     object lastObj = objList[i - 1];
-                    Debug.LogError(lastObj);
                     if (lastObj is Type)
                     {
                         MethodInfo obj = (lastObj as Type).GetMethod(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-                        object result = obj.Invoke(null, null);
+                        object result = obj.Invoke(null, act.Params);
                         objList.Add(result);
                         act.Result = result;
                     }
                     else 
                     {
                         MethodInfo obj = lastObj.GetType().GetMethod(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-                        object result = obj.Invoke(lastObj, null);
+                        object result = obj.Invoke(lastObj, act.Params);
                         objList.Add(result);
                         act.Result = result;
                     }
@@ -204,12 +212,5 @@ public class UnityDebugger : EditorWindow
                 
             }
         }
-        //if (obj is FieldInfo) {
-        //    FieldInfo field = obj as FieldInfo;
-            
-        //}
-        //else {
-
-        //}
     }
 }
