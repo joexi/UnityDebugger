@@ -1,0 +1,215 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEditor;
+using System.Reflection;
+using System;
+public class DebugTest
+{
+    public static DebugTest instance = new DebugTest();
+    public void TestFuc()
+    {
+        Debug.LogError("TestFuc!");
+    }
+
+    public static DebugTest Instance()
+    {
+        return instance;
+    }
+}
+
+public class UnityDebugger : EditorWindow
+{
+    
+
+    public enum UnityDebuggerActionType
+    {
+        Class,
+        Method,
+        Field
+    }
+    public class UnityDebuggerAction
+    {
+        public UnityDebuggerActionType Type;
+        public string Content;
+        public object Result;
+    }
+    public List<UnityDebuggerAction> Actions = new List<UnityDebuggerAction>();
+    public List<Type> Types = new List<Type>();
+
+    
+    [MenuItem(@"Tools/Debugger")]
+    public static void Open()
+    {
+        UnityDebugger win = EditorWindow.GetWindow<UnityDebugger>();
+        win.Show();
+        win.Init();
+    }
+
+    public void Init()
+    {
+        Assembly[] assemblys = AppDomain.CurrentDomain.GetAssemblies();
+        foreach (var assembly in assemblys)
+        {
+            Type[] types = assembly.GetTypes();
+        }
+
+    }
+
+    public void OnGUI()
+    {
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("测试")) {
+            UnityDebuggerAction action = new UnityDebuggerAction
+            {
+                Type = UnityDebuggerActionType.Class,
+                Content = "DebugTest"
+            };
+
+            Actions.Add(action);
+
+            UnityDebuggerAction action2 = new UnityDebuggerAction
+            {
+                Type = UnityDebuggerActionType.Method,
+                Content = "Instance"
+            };
+
+            Actions.Add(action2);
+
+            UnityDebuggerAction action3 = new UnityDebuggerAction
+            {
+                Type = UnityDebuggerActionType.Method,
+                Content = "TestFuc"
+            };
+
+            Actions.Add(action3);
+        }
+        if (GUILayout.Button("类"))
+        {
+            UnityDebuggerAction action = new UnityDebuggerAction
+            {
+                Type = UnityDebuggerActionType.Class
+            };
+            Actions.Add(action);
+        }
+        if (GUILayout.Button("函数"))
+        {
+            UnityDebuggerAction action = new UnityDebuggerAction
+            {
+                Type = UnityDebuggerActionType.Method
+            };
+            Actions.Add(action);
+        }
+        if (GUILayout.Button("字段"))
+        {
+            UnityDebuggerAction action = new UnityDebuggerAction
+            {
+                Type = UnityDebuggerActionType.Field
+            };
+            Actions.Add(action);
+        }
+        if (GUILayout.Button("Clear"))
+        {
+            Actions.RemoveAt(Actions.Count - 1);
+        }
+        GUILayout.EndHorizontal();
+
+       
+        for (int i = 0; i < Actions.Count; i++)
+        {
+            GUILayout.BeginHorizontal();
+            UnityDebuggerAction act = Actions[i];
+            GUILayout.Label(act.Type.ToString());
+            act.Content = GUILayout.TextField(act.Content);
+            if (act.Result != null) {
+                GUILayout.Label("Result:" + act.Result.ToString() + " Type:" + act.Result.GetType());
+            }
+            GUILayout.EndHorizontal();
+        }
+       
+
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Invoke"))
+        {
+            List<object> objList = new List<object>();
+            for (int i = 0; i < Actions.Count; i++)
+            {
+                UnityDebuggerAction act = Actions[i];
+                Debug.LogError(act.Content);
+                if (act.Type == UnityDebuggerActionType.Class)
+                {
+                    Assembly asm = Assembly.GetAssembly(typeof(MonoBehaviour));
+                    Type t = asm.GetType(act.Content);
+                    if (t == null)
+                    {
+                        asm = Assembly.GetAssembly(typeof(UnityDebugger));
+                        t = asm.GetType(act.Content);
+                    }
+                    objList.Add(t);
+                    act.Result = t;
+                }
+                else if (act.Type == UnityDebuggerActionType.Field)
+                {
+                    object lastObj = objList[i - 1];
+                    if (lastObj is Type)
+                    {
+                        FieldInfo obj = (lastObj as Type).GetField(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                        object result = obj.GetValue(lastObj);
+                        objList.Add(result);
+                        act.Result = result;
+                    }
+                    else
+                    {
+                        FieldInfo obj = lastObj.GetType().GetField(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                        object result = obj.GetValue(lastObj);
+                        objList.Add(result);
+                        act.Result = result;
+                    }
+                }
+                else if (act.Type == UnityDebuggerActionType.Method)
+                {
+                    
+                    object lastObj = objList[i - 1];
+                    Debug.LogError(lastObj);
+                    if (lastObj is Type)
+                    {
+                        MethodInfo obj = (lastObj as Type).GetMethod(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                        object result = obj.Invoke(null, null);
+                        objList.Add(result);
+                        act.Result = result;
+                    }
+                    else 
+                    {
+                        MethodInfo obj = lastObj.GetType().GetMethod(act.Content.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                        object result = obj.Invoke(lastObj, null);
+                        objList.Add(result);
+                        act.Result = result;
+                    }
+                }
+            }
+            LogObj(objList);
+        }
+        GUILayout.EndHorizontal();
+    }
+
+    public void LogObj(List<object> objs) {
+        for (int i = objs.Count - 1; i >= 0; i--) {
+
+            if (objs[i] is FieldInfo)
+            {
+               
+            }
+            else {
+                
+            }
+        }
+        //if (obj is FieldInfo) {
+        //    FieldInfo field = obj as FieldInfo;
+            
+        //}
+        //else {
+
+        //}
+    }
+}
