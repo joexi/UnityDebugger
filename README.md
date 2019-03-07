@@ -9,3 +9,4 @@ Lite tool helping check runtime status of unity application in Editor
 * Method Param support
 
 # Example
+![](https://github.com/joexi/UnityDebugger/blob/master/QQ%E6%88%AA%E5%9B%BE20190307135959.png)
